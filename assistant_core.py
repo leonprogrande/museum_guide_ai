@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 import speech_recognition as sr
 
@@ -6,6 +6,7 @@ from config import AppConfig
 from gemini_service import GeminiService
 from stt_service import SpeechToTextService
 from text_utils import normalize_text
+from tts_service import TextToSpeechService
 
 
 class VoiceAssistant:
@@ -14,10 +15,12 @@ class VoiceAssistant:
         config: AppConfig,
         stt_service: SpeechToTextService,
         gemini_service: GeminiService,
+        tts_service: TextToSpeechService,
     ) -> None:
         self.config = config
         self.stt = stt_service
         self.gemini = gemini_service
+        self.tts = tts_service
 
         self.recognizer = sr.Recognizer()
         self.recognizer.pause_threshold = config.silence_seconds
@@ -56,6 +59,7 @@ class VoiceAssistant:
 
                     answer = self.gemini.answer(question)
                     self._print_turn(question, answer)
+                    self.tts.speak(answer)
 
                 except sr.WaitTimeoutError:
                     continue

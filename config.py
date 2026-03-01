@@ -1,4 +1,4 @@
-﻿import os
+import os
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
@@ -15,6 +15,9 @@ class AppConfig:
     command_timeout_seconds: int
     ambient_calibration_seconds: float
     microphone_device_index: int | None
+    tts_enabled: bool
+    tts_rate: int
+    tts_volume: float
 
 
 MUSEUM_SYSTEM_PROMPT = (
@@ -29,6 +32,17 @@ def _get_optional_int(value: str | None) -> int | None:
     if value is None or value.strip() == "":
         return None
     return int(value)
+
+
+def _get_bool(value: str | None, default: bool) -> bool:
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on", "si", "s"}:
+        return True
+    if normalized in {"0", "false", "no", "off", "n"}:
+        return False
+    return default
 
 
 def load_config() -> AppConfig:
@@ -48,4 +62,7 @@ def load_config() -> AppConfig:
         command_timeout_seconds=int(os.getenv("COMMAND_TIMEOUT_SECONDS", "8")),
         ambient_calibration_seconds=float(os.getenv("AMBIENT_CALIBRATION_SECONDS", "1.0")),
         microphone_device_index=_get_optional_int(os.getenv("MICROPHONE_DEVICE_INDEX")),
+        tts_enabled=_get_bool(os.getenv("TTS_ENABLED"), True),
+        tts_rate=int(os.getenv("TTS_RATE", "175")),
+        tts_volume=float(os.getenv("TTS_VOLUME", "1.0")),
     )

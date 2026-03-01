@@ -1,4 +1,4 @@
-﻿import google.generativeai as genai
+import google.generativeai as genai
 
 
 class GeminiService:
@@ -8,7 +8,12 @@ class GeminiService:
             model_name=model_name,
             system_instruction=system_prompt,
         )
+        # Chat mantiene el contexto automaticamente entre turnos.
+        self.chat = self.model.start_chat(history=[])
 
     def answer(self, question: str) -> str:
-        response = self.model.generate_content(question)
+        response = self.chat.send_message(question)
         return (response.text or "").strip()
+
+    def reset_history(self) -> None:
+        self.chat = self.model.start_chat(history=[])
