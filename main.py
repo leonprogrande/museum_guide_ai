@@ -20,6 +20,8 @@ def main() -> None:
         enabled=config.tts_enabled,
         rate=config.tts_rate,
         volume=config.tts_volume,
+        language=config.tts_language,
+        voice_id=config.tts_voice_id,
     )
 
     assistant = VoiceAssistant(
