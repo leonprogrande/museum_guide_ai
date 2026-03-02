@@ -22,6 +22,7 @@ def main() -> None:
         volume=config.tts_volume,
         language=config.tts_language,
         voice_id=config.tts_voice_id,
+        provider=config.tts_provider,
     )
 
     assistant = VoiceAssistant(

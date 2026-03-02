@@ -20,6 +20,7 @@ class AppConfig:
     tts_volume: float
     tts_language: str
     tts_voice_id: str
+    tts_provider: str
 
 
 MUSEUM_SYSTEM_PROMPT = (
@@ -69,4 +70,5 @@ def load_config() -> AppConfig:
         tts_volume=float(os.getenv("TTS_VOLUME", "1.0")),
         tts_language=os.getenv("TTS_LANGUAGE", "es").strip().lower(),
         tts_voice_id=os.getenv("TTS_VOICE_ID", "").strip(),
+        tts_provider=os.getenv("TTS_PROVIDER", "gtts").strip().lower(),
     )
