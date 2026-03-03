@@ -2,6 +2,7 @@ from assistant_core import VoiceAssistant
 from audio_utils import suppress_alsa_warnings
 from config import MUSEUM_SYSTEM_PROMPT, load_config
 from gemini_service import GeminiService
+from qr_scanner import QRScannerService
 from stt_service import SpeechToTextService
 from tts_service import TextToSpeechService
 
@@ -24,12 +25,17 @@ def main() -> None:
         voice_id=config.tts_voice_id,
         provider=config.tts_provider,
     )
+    qr_scanner = QRScannerService(
+        camera_index=config.qr_camera_index,
+        timeout_seconds=config.qr_timeout_seconds,
+    )
 
     assistant = VoiceAssistant(
         config=config,
         stt_service=stt_service,
         gemini_service=gemini_service,
         tts_service=tts_service,
+        qr_scanner=qr_scanner,
     )
     assistant.run()
 

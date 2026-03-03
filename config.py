@@ -21,6 +21,8 @@ class AppConfig:
     tts_language: str
     tts_voice_id: str
     tts_provider: str
+    qr_camera_index: int
+    qr_timeout_seconds: float
 
 
 MUSEUM_SYSTEM_PROMPT = (
@@ -71,4 +73,6 @@ def load_config() -> AppConfig:
         tts_language=os.getenv("TTS_LANGUAGE", "es").strip().lower(),
         tts_voice_id=os.getenv("TTS_VOICE_ID", "").strip(),
         tts_provider=os.getenv("TTS_PROVIDER", "gtts").strip().lower(),
+        qr_camera_index=int(os.getenv("QR_CAMERA_INDEX", "0")),
+        qr_timeout_seconds=float(os.getenv("QR_TIMEOUT_SECONDS", "12")),
     )

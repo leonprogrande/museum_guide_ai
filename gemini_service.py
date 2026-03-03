@@ -15,5 +15,16 @@ class GeminiService:
         response = self.chat.send_message(question)
         return (response.text or "").strip()
 
+    def answer_from_qr(self, qr_data: str) -> str:
+        prompt = (
+            "Se escaneo un codigo QR de una obra o recurso del museo. "
+            "Contenido del QR:\n"
+            f"{qr_data}\n\n"
+            "Explica al visitante que significa este QR y da contexto util y breve. "
+            "Si el contenido es un enlace, menciona de forma clara que apunta a ese recurso."
+        )
+        response = self.chat.send_message(prompt)
+        return (response.text or "").strip()
+
     def reset_history(self) -> None:
         self.chat = self.model.start_chat(history=[])
