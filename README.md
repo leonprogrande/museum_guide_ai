@@ -50,5 +50,5 @@ python main.py
 - Idioma STT configurado en `es-ES`.
 - Wake phrase en código: `ey asistente`.
 - Modelo Gemini en código: `gemini-1.5-flash`.
-- Comando de voz para QR: `scan qr code` (tambien `escanea qr`).
+- En cada consulta, el asistente intenta detectar automaticamente un QR con la camara y agrega el texto detectado al contexto del chat.
 - Para QR por camara se requiere `opencv-python`.

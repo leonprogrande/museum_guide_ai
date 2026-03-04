@@ -74,5 +74,5 @@ def load_config() -> AppConfig:
         tts_voice_id=os.getenv("TTS_VOICE_ID", "").strip(),
         tts_provider=os.getenv("TTS_PROVIDER", "gtts").strip().lower(),
         qr_camera_index=int(os.getenv("QR_CAMERA_INDEX", "0")),
-        qr_timeout_seconds=float(os.getenv("QR_TIMEOUT_SECONDS", "12")),
+        qr_timeout_seconds=float(os.getenv("QR_TIMEOUT_SECONDS", "2")),
     )

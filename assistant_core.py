@@ -60,10 +60,16 @@ class VoiceAssistant:
                         print("[INFO] No se detecto una pregunta valida.\n")
                         continue
 
-                    if self._is_qr_scan_command(question):
-                        answer = self._handle_qr_scan()
-                    else:
-                        answer = self.gemini.answer(question)
+                    question_for_model = question
+                    qr_result = self.qr_scanner.scan()
+                    if qr_result.success and qr_result.data:
+                        print(f"[QR] Detectado: {qr_result.data}")
+                        question_for_model = self._with_qr_context(
+                            question=question,
+                            qr_data=qr_result.data,
+                        )
+
+                    answer = self.gemini.answer(question_for_model)
                     self._print_turn(question, answer)
                     self.tts.speak(answer)
 
@@ -85,26 +91,12 @@ class VoiceAssistant:
         return self.config.wake_phrase in wake_text
 
     @staticmethod
-    def _is_qr_scan_command(question: str) -> bool:
-        normalized = normalize_text(question)
-        triggers = (
-            "scan qr code",
-            "scan qr",
-            "scanea qr",
-            "escanea qr",
-            "escanear qr",
-            "leer qr",
-            "lee qr",
+    def _with_qr_context(question: str, qr_data: str) -> str:
+        return (
+            f"{question}\n\n"
+            "Informacion de la obra actual visitada (extraida del QR):\n"
+            f"{qr_data}"
         )
-        return any(trigger in normalized for trigger in triggers)
-
-    def _handle_qr_scan(self) -> str:
-        print("[QR] Iniciando escaneo con camara...")
-        result = self.qr_scanner.scan()
-        if not result.success:
-            return f"No pude escanear el codigo QR. {result.error}"
-        print(f"[QR] Detectado: {result.data}")
-        return self.gemini.answer_from_qr(result.data)
 
     @staticmethod
     def _print_turn(question: str, answer: str) -> None:

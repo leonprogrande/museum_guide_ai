@@ -10,7 +10,7 @@ class QRScanResult:
 
 
 class QRScannerService:
-    def __init__(self, camera_index: int = 0, timeout_seconds: float = 12.0) -> None:
+    def __init__(self, camera_index: int = 0, timeout_seconds: float = 2.0) -> None:
         self.camera_index = camera_index
         self.timeout_seconds = max(1.0, timeout_seconds)
 
