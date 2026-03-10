@@ -52,3 +52,12 @@ python main.py
 - Modelo Gemini en código: `gemini-1.5-flash`.
 - En cada consulta, el asistente intenta detectar automaticamente un QR con la camara y agrega el texto detectado al contexto del chat.
 - Para QR por camara se requiere `opencv-python`.
+
+## Entrada por texto (opcional)
+
+Ademas de voz, puedes escribir preguntas en la terminal y presionar Enter.
+
+Variables de entorno:
+
+- `TEXT_INPUT_ENABLED` (default: `true`): habilita lectura por teclado.
+- `TEXT_INPUT_BYPASS_WAKE` (default: `true`): si es `true`, el texto se procesa sin decir la wake phrase; si es `false`, el texto solo se acepta despues de activar con la wake phrase.

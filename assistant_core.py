@@ -1,4 +1,8 @@
 from datetime import datetime
+import queue
+import sys
+import threading
+from time import monotonic
 
 import speech_recognition as sr
 
@@ -31,9 +35,17 @@ class VoiceAssistant:
 
         self.microphone = sr.Microphone(device_index=config.microphone_device_index)
 
+        self._typed_queue: queue.Queue[str] = queue.Queue()
+        self._stop_event = threading.Event()
+        self._text_thread: threading.Thread | None = None
+
     def run(self) -> None:
         print("Asistente iniciado.")
         print(f"Di '{self.config.wake_phrase}' para activarlo.")
+        if self.config.text_input_enabled:
+            print("Tambien puedes escribir tu pregunta y presionar Enter.")
+            print("Si escribes mientras escucha, se enviara como alternativa al audio.")
+            self._start_text_input_thread()
 
         with self.microphone as source:
             self.recognizer.adjust_for_ambient_noise(
@@ -44,51 +56,99 @@ class VoiceAssistant:
 
             while True:
                 try:
+                    if self.config.text_input_enabled and self.config.text_input_bypass_wake:
+                        typed = self._pop_typed_question()
+                        if typed:
+                            self._handle_question(typed)
+                            continue
+
                     if not self._wake_phrase_detected(source):
                         continue
 
                     print("\n[Wake] Activado. Habla ahora (se cierra al detectar silencio)...")
-
-                    command_audio = self.recognizer.listen(
-                        source,
-                        timeout=self.config.command_timeout_seconds,
-                        phrase_time_limit=None,
-                    )
-                    question = self.stt.transcribe(self.recognizer, command_audio).strip()
+                    question = self._listen_for_command_or_text(source).strip()
 
                     if not question:
                         print("[INFO] No se detecto una pregunta valida.\n")
                         continue
-
-                    question_for_model = question
-                    qr_result = self.qr_scanner.scan()
-                    if qr_result.success and qr_result.data:
-                        print(f"[QR] Detectado: {qr_result.data}")
-                        question_for_model = self._with_qr_context(
-                            question=question,
-                            qr_data=qr_result.data,
-                        )
-
-                    answer = self.gemini.answer(question_for_model)
-                    self._print_turn(question, answer)
-                    self.tts.speak(answer)
+                    self._handle_question(question)
 
                 except sr.WaitTimeoutError:
                     continue
                 except KeyboardInterrupt:
                     print("\nSaliendo...")
+                    self._stop_event.set()
                     break
                 except Exception as err:
                     print(f"[ERROR] {err}")
 
     def _wake_phrase_detected(self, source: sr.AudioSource) -> bool:
+        # Usar timeout corto para poder atender entrada por teclado sin bloquear indefinidamente.
         wake_audio = self.recognizer.listen(
             source,
-            timeout=None,
+            timeout=1.0,
             phrase_time_limit=self.config.wake_phrase_limit_seconds,
         )
         wake_text = normalize_text(self.stt.transcribe(self.recognizer, wake_audio))
         return self.config.wake_phrase in wake_text
+
+    def _start_text_input_thread(self) -> None:
+        if self._text_thread is not None:
+            return
+
+        def worker() -> None:
+            while not self._stop_event.is_set():
+                line = sys.stdin.readline()
+                if line == "":
+                    return
+                text = line.strip()
+                if text:
+                    self._typed_queue.put(text)
+
+        self._text_thread = threading.Thread(target=worker, daemon=True, name="text-input")
+        self._text_thread.start()
+
+    def _pop_typed_question(self) -> str:
+        try:
+            return self._typed_queue.get_nowait()
+        except queue.Empty:
+            return ""
+
+    def _listen_for_command_or_text(self, source: sr.AudioSource) -> str:
+        deadline = monotonic() + max(1, self.config.command_timeout_seconds)
+        while monotonic() < deadline:
+            typed = self._pop_typed_question()
+            if typed:
+                return typed
+
+            try:
+                command_audio = self.recognizer.listen(
+                    source,
+                    timeout=0.5,
+                    phrase_time_limit=None,
+                )
+            except sr.WaitTimeoutError:
+                continue
+
+            question = self.stt.transcribe(self.recognizer, command_audio).strip()
+            if question:
+                return question
+
+        return ""
+
+    def _handle_question(self, question: str) -> None:
+        question_for_model = question
+        qr_result = self.qr_scanner.scan()
+        if qr_result.success and qr_result.data:
+            print(f"[QR] Detectado: {qr_result.data}")
+            question_for_model = self._with_qr_context(
+                question=question,
+                qr_data=qr_result.data,
+            )
+
+        answer = self.gemini.answer(question_for_model)
+        self._print_turn(question, answer)
+        self.tts.speak(answer)
 
     @staticmethod
     def _with_qr_context(question: str, qr_data: str) -> str:
