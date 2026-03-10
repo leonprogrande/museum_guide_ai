@@ -61,3 +61,7 @@ Variables de entorno:
 
 - `TEXT_INPUT_ENABLED` (default: `true`): habilita lectura por teclado.
 - `TEXT_INPUT_BYPASS_WAKE` (default: `true`): si es `true`, el texto se procesa sin decir la wake phrase; si es `false`, el texto solo se acepta despues de activar con la wake phrase.
+
+## Respuesta para QR
+
+Si quieres que el asistente explique especificamente el QR detectado, pregunta por ejemplo: `qr` o `informacion del qr`.

@@ -141,14 +141,51 @@ class VoiceAssistant:
         qr_result = self.qr_scanner.scan()
         if qr_result.success and qr_result.data:
             print(f"[QR] Detectado: {qr_result.data}")
+            if self._is_qr_info_request(question):
+                answer = self.gemini.answer_from_qr(qr_result.data)
+                self._print_turn(question, answer)
+                self.tts.speak(answer)
+                return
+
             question_for_model = self._with_qr_context(
                 question=question,
                 qr_data=qr_result.data,
             )
+        else:
+            if self._is_qr_info_request(question):
+                answer = (
+                    "No detecte ningun QR en este momento. "
+                    "Acerca el codigo a la camara, mejora la iluminacion y vuelve a intentar."
+                )
+                self._print_turn(question, answer)
+                self.tts.speak(answer)
+                return
 
         answer = self.gemini.answer(question_for_model)
         self._print_turn(question, answer)
         self.tts.speak(answer)
+
+    @staticmethod
+    def _is_qr_info_request(question: str) -> bool:
+        q = normalize_text(question or "")
+        if not q:
+            return False
+        if q in {"qr", "codigo qr", "código qr"}:
+            return True
+        keywords = (
+            "informacion del qr",
+            "información del qr",
+            "info del qr",
+            "que dice el qr",
+            "qué dice el qr",
+            "leer qr",
+            "escanea qr",
+            "escanea el qr",
+            "escanea codigo",
+            "escanea el codigo",
+            "escanea el código",
+        )
+        return any(k in q for k in keywords)
 
     @staticmethod
     def _with_qr_context(question: str, qr_data: str) -> str:
