@@ -154,11 +154,12 @@ class VoiceAssistant:
     def _handle_question(self, question: str) -> None:
         question_for_model = question
         qr_result = self.qr_scanner.scan()
+        qr_status = self._format_qr_status(qr_result.success and bool(qr_result.data))
         if qr_result.success and qr_result.data:
             print(f"[QR] Detectado: {qr_result.data}")
             if self._is_qr_info_request(question):
                 answer = self.gemini.answer_from_qr(qr_result.data)
-                self._print_turn(question, answer)
+                self._print_turn(question, answer, qr_status)
                 self.tts.speak(answer)
                 return
 
@@ -172,12 +173,12 @@ class VoiceAssistant:
                     "No detecte ningun QR en este momento. "
                     "Acerca el codigo a la camara, mejora la iluminacion y vuelve a intentar."
                 )
-                self._print_turn(question, answer)
+                self._print_turn(question, answer, qr_status)
                 self.tts.speak(answer)
                 return
 
         answer = self.gemini.answer(question_for_model)
-        self._print_turn(question, answer)
+        self._print_turn(question, answer, qr_status)
         self.tts.speak(answer)
 
     @staticmethod
@@ -211,7 +212,14 @@ class VoiceAssistant:
         )
 
     @staticmethod
-    def _print_turn(question: str, answer: str) -> None:
+    def _format_qr_status(qr_detected: bool) -> str:
+        if qr_detected:
+            return "QR escaneado: si"
+        return "QR escaneado: no"
+
+    @staticmethod
+    def _print_turn(question: str, answer: str, qr_status: str) -> None:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{timestamp}] Pregunta: {question}")
-        print(f"[{timestamp}] Respuesta: {answer}\n")
+        print(f"[{timestamp}] Respuesta: {answer}")
+        print(f"[{timestamp}] {qr_status}\n")
