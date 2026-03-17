@@ -2,7 +2,7 @@ from datetime import datetime
 import queue
 import sys
 import threading
-from time import monotonic
+from time import monotonic, sleep
 
 import speech_recognition as sr
 
@@ -47,40 +47,48 @@ class VoiceAssistant:
             print("Si escribes mientras escucha, se enviara como alternativa al audio.")
             self._start_text_input_thread()
 
-        with self.microphone as source:
-            self.recognizer.adjust_for_ambient_noise(
-                source,
-                duration=self.config.ambient_calibration_seconds,
-            )
-            print("Microfono calibrado. Escuchando...")
+        while True:
+            try:
+                with self.microphone as source:
+                    self.recognizer.adjust_for_ambient_noise(
+                        source,
+                        duration=self.config.ambient_calibration_seconds,
+                    )
+                    print("Microfono calibrado. Escuchando...")
 
-            while True:
-                try:
-                    if self.config.text_input_enabled and self.config.text_input_bypass_wake:
-                        typed = self._pop_typed_question()
-                        if typed:
-                            self._handle_question(typed)
+                    while True:
+                        try:
+                            if self.config.text_input_enabled and self.config.text_input_bypass_wake:
+                                typed = self._pop_typed_question()
+                                if typed:
+                                    self._handle_question(typed)
+                                    continue
+
+                            if not self._wake_phrase_detected(source):
+                                continue
+
+                            print("\n[Wake] Activado. Habla ahora (se cierra al detectar silencio)...")
+                            question = self._listen_for_command_or_text(source).strip()
+
+                            if not question:
+                                print("[INFO] No se detecto una pregunta valida.\n")
+                                continue
+                            self._handle_question(question)
+
+                        except sr.WaitTimeoutError:
                             continue
-
-                    if not self._wake_phrase_detected(source):
-                        continue
-
-                    print("\n[Wake] Activado. Habla ahora (se cierra al detectar silencio)...")
-                    question = self._listen_for_command_or_text(source).strip()
-
-                    if not question:
-                        print("[INFO] No se detecto una pregunta valida.\n")
-                        continue
-                    self._handle_question(question)
-
-                except sr.WaitTimeoutError:
-                    continue
-                except KeyboardInterrupt:
-                    print("\nSaliendo...")
-                    self._stop_event.set()
-                    break
-                except Exception as err:
-                    print(f"[ERROR] {err}")
+            except KeyboardInterrupt:
+                print("\nSaliendo...")
+                self._stop_event.set()
+                break
+            except OSError as err:
+                print(f"[ERROR] Microfono no disponible: {err}")
+                print("[INFO] Reintentando abrir el microfono...")
+                sleep(1.0)
+                self.microphone = sr.Microphone(device_index=self.config.microphone_device_index)
+            except Exception as err:
+                print(f"[ERROR] {err}")
+                sleep(0.5)
 
     def _wake_phrase_detected(self, source: sr.AudioSource) -> bool:
         # Usar timeout corto para poder atender entrada por teclado sin bloquear indefinidamente.
@@ -100,6 +108,7 @@ class VoiceAssistant:
             while not self._stop_event.is_set():
                 line = sys.stdin.readline()
                 if line == "":
+                    print("[INFO] Entrada de texto desconectada.")
                     return
                 text = line.strip()
                 if text:
@@ -133,7 +142,13 @@ class VoiceAssistant:
             question = self.stt.transcribe(self.recognizer, command_audio).strip()
             if question:
                 return question
+            stt_error = self.stt.consume_last_error()
+            if stt_error:
+                print(f"[INFO] {stt_error}")
+                self.tts.speak(stt_error)
+                return ""
 
+        print("[INFO] Tiempo de escucha agotado, intenta de nuevo.")
         return ""
 
     def _handle_question(self, question: str) -> None:

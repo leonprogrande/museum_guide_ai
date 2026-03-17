@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from time import monotonic
 
@@ -46,10 +47,11 @@ class QRScannerService:
                     return QRScanResult(success=True, data=data.strip())
         finally:
             cap.release()
-            try:
-                cv2.destroyAllWindows()
-            except Exception:
-                pass
+            if os.getenv("DISPLAY"):
+                try:
+                    cv2.destroyAllWindows()
+                except Exception:
+                    pass
 
         return QRScanResult(
             success=False,

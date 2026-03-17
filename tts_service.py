@@ -19,6 +19,7 @@ class TextToSpeechService:
         self.voice_id = (voice_id or "").strip().lower()
         self.engine = None
         self.pygame = None
+        self.audio_ready = False
 
         if not enabled:
             return
@@ -27,7 +28,12 @@ class TextToSpeechService:
             import pygame
 
             self.pygame = pygame
-            self.pygame.mixer.init()
+            try:
+                self.pygame.mixer.init()
+                self.audio_ready = True
+            except Exception as err:
+                self.enabled = False
+                print(f"[ERROR TTS] No se pudo inicializar pygame mixer: {err}")
             return
 
         import pyttsx3
@@ -77,7 +83,7 @@ class TextToSpeechService:
             self.engine.setProperty("voice", selected)
 
     def _speak_with_gtts(self, text: str) -> None:
-        if not self.pygame:
+        if not self.pygame or not self.audio_ready:
             return
 
         from gtts import gTTS
@@ -93,18 +99,29 @@ class TextToSpeechService:
             while self.pygame.mixer.music.get_busy():
                 time.sleep(0.05)
         finally:
+            if self.pygame and self.audio_ready:
+                try:
+                    self.pygame.mixer.music.unload()
+                except Exception:
+                    pass
             if tmp_path and os.path.exists(tmp_path):
-                os.remove(tmp_path)
+                try:
+                    os.remove(tmp_path)
+                except (PermissionError, FileNotFoundError):
+                    pass
 
     def speak(self, text: str) -> None:
         if not self.enabled or not text:
             return
 
-        if self.provider == "gtts":
-            self._speak_with_gtts(text)
-            return
+        try:
+            if self.provider == "gtts":
+                self._speak_with_gtts(text)
+                return
 
-        if not self.engine:
-            return
-        self.engine.say(text)
-        self.engine.runAndWait()
+            if not self.engine:
+                return
+            self.engine.say(text)
+            self.engine.runAndWait()
+        except Exception as err:
+            print(f"[ERROR TTS] No se pudo reproducir el mensaje: {err}")

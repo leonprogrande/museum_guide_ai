@@ -62,7 +62,7 @@ def load_config() -> AppConfig:
     return AppConfig(
         wake_phrase=os.getenv("WAKE_PHRASE", "ey asistente").strip().lower(),
         language=os.getenv("STT_LANGUAGE", "es-ES").strip(),
-        gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip(),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash").strip(),
         gemini_api_key=gemini_api_key,
         silence_seconds=float(os.getenv("SILENCE_SECONDS", "1.0")),
         wake_phrase_limit_seconds=int(os.getenv("WAKE_PHRASE_LIMIT_SECONDS", "3")),

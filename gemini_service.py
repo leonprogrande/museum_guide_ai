@@ -12,8 +12,7 @@ class GeminiService:
         self.chat = self.model.start_chat(history=[])
 
     def answer(self, question: str) -> str:
-        response = self.chat.send_message(question)
-        return (response.text or "").strip()
+        return self._send_message(question)
 
     def answer_from_qr(self, qr_data: str) -> str:
         prompt = (
@@ -23,8 +22,15 @@ class GeminiService:
             "Explica al visitante que significa este QR y da contexto util y breve. "
             "Si el contenido es un enlace, menciona de forma clara que apunta a ese recurso."
         )
-        response = self.chat.send_message(prompt)
-        return (response.text or "").strip()
+        return self._send_message(prompt)
 
     def reset_history(self) -> None:
         self.chat = self.model.start_chat(history=[])
+
+    def _send_message(self, prompt: str) -> str:
+        try:
+            response = self.chat.send_message(prompt)
+            return (response.text or "").strip()
+        except Exception as err:
+            print(f"[ERROR GEMINI] No se pudo obtener respuesta del modelo: {err}")
+            return "Lo siento, no puedo responder en este momento."
