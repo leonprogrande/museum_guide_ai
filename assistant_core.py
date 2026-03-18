@@ -157,6 +157,8 @@ class VoiceAssistant:
         qr_status = self._format_qr_status(qr_result.success and bool(qr_result.data))
         if qr_result.success and qr_result.data:
             print(f"[QR] Detectado: {qr_result.data}")
+            if qr_result.image_path:
+                print(f"[QR] Imagen guardada: {qr_result.image_path}")
             if self._is_qr_info_request(question):
                 answer = self.gemini.answer_from_qr(qr_result.data)
                 self._print_turn(question, answer, qr_status)
@@ -170,6 +172,8 @@ class VoiceAssistant:
         else:
             if qr_result.error:
                 print(f"[QR] {qr_result.error}")
+            if qr_result.image_path:
+                print(f"[QR] Imagen guardada: {qr_result.image_path}")
             if self._is_qr_info_request(question):
                 answer = (
                     "No detecte ningun QR en este momento. "

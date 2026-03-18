@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from time import monotonic
 
 
@@ -8,6 +9,7 @@ class QRScanResult:
     success: bool
     data: str
     error: str = ""
+    image_path: str = ""
 
 
 class QRScannerService:
@@ -20,6 +22,8 @@ class QRScannerService:
         self.camera_index = camera_index
         self.timeout_seconds = max(1.0, timeout_seconds)
         self.image_path = (image_path or "").strip()
+        self.capture_dir = Path.cwd() / "captures"
+        self.capture_path = self.capture_dir / "latest_qr_capture.jpg"
 
     def scan(self) -> QRScanResult:
         try:
@@ -44,16 +48,23 @@ class QRScannerService:
 
         detector = cv2.QRCodeDetector()
         start = monotonic()
+        last_frame = None
 
         try:
             while monotonic() - start < self.timeout_seconds:
                 ok, frame = cap.read()
                 if not ok:
                     continue
+                last_frame = frame
 
                 data, _, _ = detector.detectAndDecode(frame)
                 if data:
-                    return QRScanResult(success=True, data=data.strip())
+                    saved_image_path = self._save_frame(cv2, frame)
+                    return QRScanResult(
+                        success=True,
+                        data=data.strip(),
+                        image_path=saved_image_path,
+                    )
         finally:
             cap.release()
             if os.getenv("DISPLAY"):
@@ -62,10 +73,12 @@ class QRScannerService:
                 except Exception:
                     pass
 
+        saved_image_path = self._save_frame(cv2, last_frame)
         return QRScanResult(
             success=False,
             data="",
             error="No se detecto ningun QR dentro del tiempo limite.",
+            image_path=saved_image_path,
         )
 
     def _scan_from_image(self, cv2) -> QRScanResult:
@@ -87,10 +100,20 @@ class QRScannerService:
         detector = cv2.QRCodeDetector()
         data, _, _ = detector.detectAndDecode(frame)
         if data:
-            return QRScanResult(success=True, data=data.strip())
+            return QRScanResult(success=True, data=data.strip(), image_path=self.image_path)
 
         return QRScanResult(
             success=False,
             data="",
             error=f"No se detecto ningun QR en la imagen: {self.image_path}",
+            image_path=self.image_path,
         )
+
+    def _save_frame(self, cv2, frame) -> str:
+        if frame is None:
+            return ""
+
+        self.capture_dir.mkdir(parents=True, exist_ok=True)
+        if cv2.imwrite(str(self.capture_path), frame):
+            return str(self.capture_path)
+        return ""
