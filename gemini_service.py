@@ -14,6 +14,34 @@ class GeminiService:
     def answer(self, question: str) -> str:
         return self._send_message(question)
 
+    def answer_with_qr_context(self, question: str, qr_data: str) -> str:
+        prompt = (
+            f"{question}\n\n"
+            "Contexto detectado en el codigo QR de la escena:\n"
+            f"{qr_data}\n\n"
+            "Responde usando este contexto si ayuda a contestar la pregunta del visitante."
+        )
+        return self._send_message(prompt)
+
+    def answer_with_image(self, question: str, image_path: str) -> str:
+        try:
+            with open(image_path, "rb") as image_file:
+                image_bytes = image_file.read()
+        except OSError as err:
+            print(f"[ERROR GEMINI] No se pudo abrir la imagen de contexto: {err}")
+            return self.answer(question)
+
+        prompt = (
+            "Usa la imagen como contexto visual del entorno del visitante. "
+            "Si la imagen ayuda, incorporala en tu respuesta; si no, responde normalmente.\n\n"
+            f"Pregunta del visitante: {question}"
+        )
+        image_part = {
+            "mime_type": "image/jpeg",
+            "data": image_bytes,
+        }
+        return self._send_message([prompt, image_part])
+
     def answer_from_qr(self, qr_data: str) -> str:
         prompt = (
             "Se escaneo un codigo QR de una obra o recurso del museo. "
@@ -27,7 +55,7 @@ class GeminiService:
     def reset_history(self) -> None:
         self.chat = self.model.start_chat(history=[])
 
-    def _send_message(self, prompt: str) -> str:
+    def _send_message(self, prompt) -> str:
         try:
             response = self.chat.send_message(prompt)
             return (response.text or "").strip()
