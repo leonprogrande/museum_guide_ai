@@ -28,6 +28,7 @@ def main() -> None:
     qr_scanner = QRScannerService(
         camera_index=config.qr_camera_index,
         timeout_seconds=config.qr_timeout_seconds,
+        image_path=config.qr_image_path,
     )
 
     assistant = VoiceAssistant(

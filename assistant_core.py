@@ -168,6 +168,8 @@ class VoiceAssistant:
                 qr_data=qr_result.data,
             )
         else:
+            if qr_result.error:
+                print(f"[QR] {qr_result.error}")
             if self._is_qr_info_request(question):
                 answer = (
                     "No detecte ningun QR en este momento. "
