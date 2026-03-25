@@ -6,3 +6,4 @@ pyttsx3==2.98
 gTTS==2.5.4
 pygame==2.6.1
 opencv-python==4.10.0.84
+pyzbar==0.1.9

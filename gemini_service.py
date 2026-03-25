@@ -19,6 +19,9 @@ class GeminiService:
             f"{question}\n\n"
             "Contexto detectado en el codigo QR de la escena:\n"
             f"{qr_data}\n\n"
+            "Primero identifica si el contenido del QR necesita traduccion al espanol. "
+            "Si contiene texto en otro idioma, traducelo de forma clara dentro de tu respuesta. "
+            "Si es un enlace o un identificador, explica brevemente que contiene y luego responde la pregunta del visitante. "
             "Responde usando este contexto si ayuda a contestar la pregunta del visitante."
         )
         return self._send_message(prompt)
@@ -47,6 +50,7 @@ class GeminiService:
             "Se escaneo un codigo QR de una obra o recurso del museo. "
             "Contenido del QR:\n"
             f"{qr_data}\n\n"
+            "Si el contenido incluye texto en otro idioma, traducelo al espanol antes de explicarlo. "
             "Explica al visitante que significa este QR y da contexto util y breve. "
             "Si el contenido es un enlace, menciona de forma clara que apunta a ese recurso."
         )

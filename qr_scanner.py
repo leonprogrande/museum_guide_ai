@@ -47,6 +47,7 @@ class QRScannerService:
 
         start = monotonic()
         captured_frame = None
+        detected_data = ""
 
         try:
             while monotonic() - start < self.timeout_seconds:
@@ -54,7 +55,9 @@ class QRScannerService:
                 if not ok:
                     continue
                 captured_frame = frame
-                break
+                detected_data = self._decode_qr(cv2, frame)
+                if detected_data:
+                    break
         finally:
             cap.release()
             if os.getenv("DISPLAY"):
@@ -72,12 +75,10 @@ class QRScannerService:
                 image_path=saved_image_path,
             )
 
-        detector = cv2.QRCodeDetector()
-        data, _, _ = detector.detectAndDecode(captured_frame)
-        if data:
+        if detected_data:
             return QRScanResult(
                 success=True,
-                data=data.strip(),
+                data=detected_data,
                 image_path=saved_image_path,
             )
 
@@ -104,10 +105,9 @@ class QRScannerService:
                 error=f"No se pudo abrir la imagen para escanear: {self.image_path}",
             )
 
-        detector = cv2.QRCodeDetector()
-        data, _, _ = detector.detectAndDecode(frame)
+        data = self._decode_qr(cv2, frame)
         if data:
-            return QRScanResult(success=True, data=data.strip(), image_path=self.image_path)
+            return QRScanResult(success=True, data=data, image_path=self.image_path)
 
         return QRScanResult(
             success=False,
@@ -115,6 +115,33 @@ class QRScannerService:
             error=f"No se detecto ningun QR en la imagen: {self.image_path}",
             image_path=self.image_path,
         )
+
+    def _decode_qr(self, cv2, frame) -> str:
+        detector = cv2.QRCodeDetector()
+        data, _, _ = detector.detectAndDecode(frame)
+        if data:
+            return data.strip()
+
+        try:
+            from pyzbar.pyzbar import decode
+        except ImportError:
+            return ""
+
+        try:
+            decoded_items = decode(frame)
+        except Exception:
+            return ""
+
+        for item in decoded_items:
+            raw_data = getattr(item, "data", b"")
+            if not raw_data:
+                continue
+            try:
+                return raw_data.decode("utf-8").strip()
+            except UnicodeDecodeError:
+                return raw_data.decode("latin-1", errors="ignore").strip()
+
+        return ""
 
     def _save_frame(self, cv2, frame) -> str:
         if frame is None:
